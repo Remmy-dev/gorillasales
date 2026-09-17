@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,  } from 'recharts';
-import { salesTrendData } from '@/lib/mockData';
+import React, { useMemo } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { salesTrendData, historicalMonthlyData, AVAILABLE_MONTHS } from '@/lib/mockData';
+import { useUser } from '@/context/UserContext';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -40,7 +41,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
             <span
               className={`text-[11px] font-bold ${
                 (payload[1]?.value / payload[0]?.value) * 100 >= 80
-                  ? 'text-positive' :'text-negative'
+                  ? 'text-positive' : 'text-negative'
               }`}
             >
               {payload[0]?.value
@@ -55,9 +56,31 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export default function SalesTrendChart() {
+  const { currentUser, canViewAllReps } = useUser();
+
+  // For managers/admins: use the global team-wide trend data
+  // For sales officers: compute their personal trend from historical monthly data
+  const chartData = React.useMemo(() => {
+    if (canViewAllReps) {
+      return salesTrendData;
+    }
+
+    // Build per-rep trend from historicalMonthlyData (sorted oldest → newest)
+    const months = [...AVAILABLE_MONTHS].reverse(); // Apr → Sep
+    return months.map((m) => {
+      const monthEntry = historicalMonthlyData.find((h) => h.month === m.value);
+      const repTarget = monthEntry?.targets?.find((t) => t.salesperson === currentUser.name);
+      return {
+        month: m.label.split(' ')[0], // "Apr", "May", etc.
+        target: repTarget?.target ?? 0,
+        actual: repTarget?.actualSales ?? 0,
+      };
+    });
+  }, [canViewAllReps, currentUser.name]);
+
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={salesTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="gradTarget" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--border)" stopOpacity={0.6} />
