@@ -73,6 +73,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Restrict /user-management to Admin role only
+  if (user && pathname.startsWith('/user-management')) {
+    const userRole =
+      user.raw_user_meta_data?.role ||
+      user.user_metadata?.role;
+    const isAdmin =
+      userRole === 'Admin' ||
+      userRole === 'admin';
+
+    if (!isAdmin) {
+      // Also check user_profiles table for role
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const profileRole = profile?.role?.toLowerCase();
+      if (profileRole !== 'admin') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   return supabaseResponse;
 }
 

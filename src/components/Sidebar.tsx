@@ -32,6 +32,7 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: number;
   managerOnly?: boolean;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -82,7 +83,7 @@ const navItems: NavItem[] = [
     label: 'User Management',
     href: '/user-management',
     icon: <ShieldCheck size={20} />,
-    managerOnly: true,
+    adminOnly: true,
   },
 ];
 
@@ -98,7 +99,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { currentUser, setCurrentUser, canViewAllReps } = useUser();
+  const { currentUser, setCurrentUser, canViewAllReps, isAdmin } = useUser();
   const { signOut } = useAuth();
   const router = useRouter();
   const [showUserPicker, setShowUserPicker] = useState(false);
@@ -109,6 +110,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   };
 
   const visibleNavItems = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
     if (item.managerOnly && !canViewAllReps) return false;
     return true;
   });
