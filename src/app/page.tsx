@@ -25,7 +25,7 @@ const RepPerformanceChart = dynamic(() => import('./components/RepPerformanceCha
 });
 
 export default function DashboardPage() {
-  const { currentUser, canViewAllReps } = useUser();
+  const { currentUser, canViewAllReps, profileLoading } = useUser();
   const [selectedMonth, setSelectedMonth] = useState('2026-09');
 
   const monthLabel = AVAILABLE_MONTHS?.find((m) => m?.value === selectedMonth)?.label ?? 'Sep 2026';
@@ -38,6 +38,31 @@ export default function DashboardPage() {
   // Get targets for selected month
   const selectedTargets = getMonthTargets(selectedMonth);
   const myTarget = selectedTargets?.find((t) => t?.salesperson === currentUser?.name);
+
+  // Show loading state while user profile/role is being fetched
+  if (profileLoading) {
+    return (
+      <AppLayout>
+        <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto space-y-6">
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div>
+              <div className="skeleton-pulse h-7 w-48 rounded-lg" />
+              <div className="skeleton-pulse h-4 w-32 rounded mt-2" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(8)]?.map((_, i) => (
+              <div key={i} className="skeleton-pulse rounded-xl h-[140px]" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="xl:col-span-2 skeleton-pulse rounded-xl h-[320px]" />
+            <div className="skeleton-pulse rounded-xl h-[320px]" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
