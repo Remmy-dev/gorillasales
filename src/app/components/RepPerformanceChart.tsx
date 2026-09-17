@@ -12,18 +12,15 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { monthlyTargets } from '@/lib/mockData';
+import { getMonthTargets } from '@/lib/mockData';
 
-const chartData = monthlyTargets.map((t) => ({
-  name: t.salesperson.split(' ')[0],
-  achievement: parseFloat(t.achievementPct.toFixed(1)),
-  sales: t.actualSales,
-  target: t.target,
-}));
+interface RepPerformanceChartProps {
+  selectedMonth: string;
+}
 
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: Array<{ value: number; payload: typeof chartData[0] }>;
+  payload?: Array<{ value: number; payload: { name: string; achievement: number; sales: number; target: number } }>;
   label?: string;
 }
 
@@ -59,7 +56,15 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export default function RepPerformanceChart() {
+export default function RepPerformanceChart({ selectedMonth }: RepPerformanceChartProps) {
+  const targets = getMonthTargets(selectedMonth);
+  const chartData = targets.map((t) => ({
+    name: t.salesperson.split(' ')[0],
+    achievement: parseFloat(t.achievementPct.toFixed(1)),
+    sales: t.actualSales,
+    target: t.target,
+  }));
+
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barSize={28}>

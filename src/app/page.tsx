@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import DashboardKpiGrid from './components/DashboardKpiGrid';
 import RepTargetsTable from './components/RepTargetsTable';
 import OverdueFollowUpsFeed from './components/OverdueFollowUpsFeed';
 import { useUser } from '@/context/UserContext';
-import { monthlyTargets, pipelineDeals, formatRWF } from '@/lib/mockData';
+import { pipelineDeals, formatRWF, AVAILABLE_MONTHS, getMonthTargets } from '@/lib/mockData';
+import { ChevronDown } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const SalesTrendChart = dynamic(() => import('./components/SalesTrendChart'), {
@@ -25,35 +26,59 @@ const RepPerformanceChart = dynamic(() => import('./components/RepPerformanceCha
 
 export default function DashboardPage() {
   const { currentUser, canViewAllReps } = useUser();
+  const [selectedMonth, setSelectedMonth] = useState('2026-09');
+
+  const monthLabel = AVAILABLE_MONTHS?.find((m) => m?.value === selectedMonth)?.label ?? 'Sep 2026';
 
   // Filter pipeline deals by role
   const visibleDeals = canViewAllReps
     ? pipelineDeals
     : pipelineDeals?.filter((d) => d?.salesperson === currentUser?.name);
 
+  // Get targets for selected month
+  const selectedTargets = getMonthTargets(selectedMonth);
+  const myTarget = selectedTargets?.find((t) => t?.salesperson === currentUser?.name);
+
   return (
     <AppLayout>
       <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto space-y-6">
         {/* Page header */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Sales Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {canViewAllReps
-                ? 'September 2026 · All Reps · Last updated 4 Sep 2026, 12:18'
-                : `September 2026 · ${currentUser?.name} · Last updated 4 Sep 2026, 12:18`}
+                ? `${monthLabel} · All Reps`
+                : `${monthLabel} · ${currentUser?.name}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs text-positive bg-positive/10 border border-positive/20 px-2.5 py-1 rounded-full font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-positive animate-pulse" />
-              Live
-            </span>
+          <div className="flex items-center gap-3">
+            {/* Global Month Selector */}
+            <div className="relative">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e?.target?.value)}
+                className="appearance-none bg-card border border-border text-sm text-foreground rounded-lg pl-3 pr-8 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 font-medium"
+              >
+                {AVAILABLE_MONTHS?.map((m) => (
+                  <option key={m?.value} value={m?.value}>
+                    {m?.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+            {selectedMonth === '2026-09' && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-positive bg-positive/10 border border-positive/20 px-2.5 py-1 rounded-full font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-positive animate-pulse" />
+                Live
+              </span>
+            )}
           </div>
         </div>
 
         {/* KPI Bento Grid */}
-        <DashboardKpiGrid />
+        <DashboardKpiGrid selectedMonth={selectedMonth} monthLabel={monthLabel} />
 
         {/* Charts + Overdue Feed row */}
         <div className="grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
@@ -89,9 +114,9 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-semibold text-foreground">
                   Achievement by Rep
                 </h3>
-                <span className="text-[11px] text-muted-foreground">Sep 2026</span>
+                <span className="text-[11px] text-muted-foreground">{monthLabel}</span>
               </div>
-              <RepPerformanceChart />
+              <RepPerformanceChart selectedMonth={selectedMonth} />
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-positive" />
@@ -109,14 +134,13 @@ export default function DashboardPage() {
             </div>
 
             <div className="xl:col-span-2">
-              <RepTargetsTable />
+              <RepTargetsTable selectedMonth={selectedMonth} monthLabel={monthLabel} />
             </div>
           </div>
         )}
 
         {/* Personal performance card — only for Sales Officers */}
         {!canViewAllReps && (() => {
-          const myTarget = monthlyTargets?.find((t) => t?.salesperson === currentUser?.name);
           if (!myTarget) return null;
           const achievementColor =
             myTarget?.achievementPct >= 80
@@ -131,17 +155,23 @@ export default function DashboardPage() {
           return (
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">My Performance — September 2026</h3>
-                <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Live</span>
+                <h3 className="text-sm font-semibold text-foreground">My Performance — {monthLabel}</h3>
+                <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {selectedMonth === '2026-09' ? 'Live' : 'Historical'}
+                </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="bg-muted/40 rounded-lg p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Target</p>
                   <p className="text-xl font-bold text-foreground font-tabular">{formatRWF(myTarget?.target)}</p>
                 </div>
                 <div className="bg-muted/40 rounded-lg p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Actual Sales</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Actual (RWF)</p>
                   <p className="text-xl font-bold text-foreground font-tabular">{formatRWF(myTarget?.actualSales)}</p>
+                </div>
+                <div className="bg-muted/40 rounded-lg p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">KG Sold</p>
+                  <p className="text-xl font-bold text-foreground font-tabular">{myTarget?.kgSold ? `${myTarget?.kgSold?.toLocaleString()} KG` : '—'}</p>
                 </div>
                 <div className="bg-muted/40 rounded-lg p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Visits</p>
