@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths that don't require auth
-  const publicPaths = ['/login', '/auth/callback'];
+  const publicPaths = ['/login', '/auth/callback', '/verify-email'];
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
 
   // Redirect unauthenticated users to login
@@ -55,8 +55,21 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from login page
   if (user && pathname === '/login') {
+    // If email not verified, send to verify-email page
+    if (!user.email_confirmed_at) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/verify-email';
+      return NextResponse.redirect(url);
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/';
+    return NextResponse.redirect(url);
+  }
+
+  // Block unverified users from accessing dashboard routes
+  if (user && !user.email_confirmed_at && !isPublicPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/verify-email';
     return NextResponse.redirect(url);
   }
 
