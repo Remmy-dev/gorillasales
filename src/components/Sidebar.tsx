@@ -23,6 +23,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useUser, MOCK_USERS } from '@/context/UserContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface NavItem {
   label: string;
@@ -97,6 +99,8 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser, setCurrentUser, canViewAllReps } = useUser();
+  const { signOut } = useAuth();
+  const router = useRouter();
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   const isActive = (href: string) => {
@@ -272,6 +276,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             collapsed ? 'justify-center px-2' : ''
           }`}
           title={collapsed ? 'Sign Out' : undefined}
+          onClick={async () => {
+            try {
+              await signOut();
+              router.replace('/login');
+              router.refresh();
+            } catch {}
+          }}
         >
           <LogOut size={20} className="shrink-0" />
           {!collapsed && <span className="text-sm">Sign Out</span>}
