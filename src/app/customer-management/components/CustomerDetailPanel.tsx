@@ -1,13 +1,15 @@
 'use client';
 
 import React from 'react';
-import { X, Phone, MapPin, User, Calendar } from 'lucide-react';
+import { X, Phone, MapPin, User, Calendar, ExternalLink } from 'lucide-react';
 import { Customer, visitLogs, formatRWFFull, formatRWF } from '@/lib/mockData';
 import Badge from '@/components/ui/Badge';
+import Link from 'next/link';
 
 interface CustomerDetailPanelProps {
   customer: Customer | null;
   onClose: () => void;
+  onEdit?: (customer: Customer) => void;
 }
 
 function getStatusVariant(status: string) {
@@ -16,7 +18,7 @@ function getStatusVariant(status: string) {
   return 'info';
 }
 
-export default function CustomerDetailPanel({ customer, onClose }: CustomerDetailPanelProps) {
+export default function CustomerDetailPanel({ customer, onClose, onEdit }: CustomerDetailPanelProps) {
   if (!customer) return null;
 
   const customerVisits = visitLogs.filter(
@@ -223,12 +225,22 @@ export default function CustomerDetailPanel({ customer, onClose }: CustomerDetai
 
         {/* Footer actions */}
         <div className="sticky bottom-0 bg-card border-t border-border px-5 py-3 flex items-center gap-2">
-          <button className="flex-1 bg-primary text-primary-foreground text-sm font-semibold py-2 rounded-lg hover:bg-primary/90 transition-colors active:scale-95">
+          <Link
+            href="/daily-sales-entry"
+            onClick={onClose}
+            className="flex-1 bg-primary text-primary-foreground text-sm font-semibold py-2 rounded-lg hover:bg-primary/90 transition-colors active:scale-95 text-center flex items-center justify-center gap-1.5"
+          >
+            <ExternalLink size={14} />
             Log New Visit
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors">
-            Edit
-          </button>
+          </Link>
+          {onEdit && (
+            <button
+              onClick={() => { onEdit(customer); onClose(); }}
+              className="px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+            >
+              Edit
+            </button>
+          )}
         </div>
       </div>
     </div>

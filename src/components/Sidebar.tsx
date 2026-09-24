@@ -88,7 +88,7 @@ const navItems: NavItem[] = [
 ];
 
 const bottomItems = [
-  { label: 'Targets & Config', href: '#', icon: <Target size={20} /> },
+  { label: 'Config & Settings', href: '/config', icon: <Target size={20} /> },
   { label: 'Account Settings', href: '/account-settings', icon: <Settings size={20} /> },
 ];
 
