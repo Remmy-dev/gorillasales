@@ -165,6 +165,49 @@ export default function CustomerTableClient() {
       <ChevronDown size={11} className="text-muted-foreground opacity-30" />
     );
 
+  function exportCustomersCSV() {
+    const rows = sorted.map((c) => ({
+      Name: c.name,
+      Category: c.category,
+      Area: c.area,
+      Contact_Person: c.contactPerson,
+      Phone: c.phone,
+      Salesperson: c.salesperson,
+      Main_Product: c.mainProduct,
+      Monthly_Potential_RWF: c.monthlyPotential,
+      Monthly_Capacity_RWF: c.monthlyCapacity,
+      Status: c.status,
+      Visits_This_Month: c.visitsThisMonth,
+      Orders_This_Month: c.ordersThisMonth,
+      Last_Order_Date: c.lastOrderDate,
+      Next_Follow_Up: c.nextFollowUp || '—',
+      Remarks: c.remarks || '',
+    }));
+
+    if (!rows.length) return;
+
+    const headers = Object.keys(rows[0]);
+    const lines = [
+      headers.join(','),
+      ...rows.map((r) =>
+        headers.map((h) => {
+          const val = String((r as Record<string, string | number>)[h] ?? '');
+          return val.includes(',') || val.includes('"') || val.includes('\n')
+            ? `"${val.replace(/"/g, '""')}"`
+            : val;
+        }).join(',')
+      ),
+    ];
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Summary stats
   const activeCount = customerList.filter((c) => c.status === 'Active').length;
   const prospectCount = customerList.filter((c) => c.status === 'Prospect').length;
@@ -507,6 +550,14 @@ export default function CustomerTableClient() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={exportCustomersCSV}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-muted transition-colors active:scale-95"
+              title="Export customer data to CSV"
+            >
+              <Download size={15} />
+              Export CSV
+            </button>
             <button
               onClick={() => setShowExport(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-muted transition-colors active:scale-95"

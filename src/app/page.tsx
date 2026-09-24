@@ -6,8 +6,8 @@ import DashboardKpiGrid from './components/DashboardKpiGrid';
 import RepTargetsTable from './components/RepTargetsTable';
 import OverdueFollowUpsFeed from './components/OverdueFollowUpsFeed';
 import { useUser } from '@/context/UserContext';
-import { pipelineDeals, formatRWF, AVAILABLE_MONTHS, getMonthTargets } from '@/lib/mockData';
-import { ChevronDown } from 'lucide-react';
+import { pipelineDeals, formatRWF, AVAILABLE_MONTHS, getMonthTargets, visitLogs } from '@/lib/mockData';
+import { ChevronDown, Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const SalesTrendChart = dynamic(() => import('./components/SalesTrendChart'), {
@@ -38,6 +38,90 @@ export default function DashboardPage() {
   // Get targets for selected month
   const selectedTargets = getMonthTargets(selectedMonth);
   const myTarget = selectedTargets?.find((t) => t?.salesperson === currentUser?.name);
+
+  function exportDashboardCSV() {
+    const monthPrefix = selectedMonth; // e.g. "2026-09"
+
+    // KPI rows
+    const kpiRows = canViewAllReps
+      ? (selectedTargets ?? []).map((t) => ({
+          Salesperson: t?.salesperson ?? '',
+          Target_RWF: t?.target ?? 0,
+          Actual_Sales_RWF: t?.actualSales ?? 0,
+          Achievement_Pct: t?.achievementPct?.toFixed(1) ?? '0.0',
+          New_Customers: t?.newCustomers ?? 0,
+          Customer_Visits: t?.customerVisits ?? 0,
+          Orders: t?.orders ?? 0,
+          KG_Sold: t?.kgSold ?? 0,
+        }))
+      : (() => {
+          const t = selectedTargets?.find((t) => t?.salesperson === currentUser?.name);
+          if (!t) return [];
+          return [{
+            Salesperson: t?.salesperson ?? '',
+            Target_RWF: t?.target ?? 0,
+            Actual_Sales_RWF: t?.actualSales ?? 0,
+            Achievement_Pct: t?.achievementPct?.toFixed(1) ?? '0.0',
+            New_Customers: t?.newCustomers ?? 0,
+            Customer_Visits: t?.customerVisits ?? 0,
+            Orders: t?.orders ?? 0,
+            KG_Sold: t?.kgSold ?? 0,
+          }];
+        })();
+
+    // Visit log rows filtered by month and rep
+    const filteredVisits = visitLogs.filter((v) => {
+      const inMonth = v.dateOfVisit?.startsWith(monthPrefix);
+      const byRep = canViewAllReps ? true : v.salesperson === currentUser?.name;
+      return inMonth && byRep;
+    });
+
+    const visitRows = filteredVisits.map((v) => ({
+      Date: v.dateOfVisit,
+      Salesperson: v.salesperson,
+      Customer: v.customerName,
+      Area: v.area,
+      Category: v.customerCategory,
+      Outcome: v.visitOutcome,
+      Product: v.productCategory,
+      Quantity: v.quantity,
+      Unit_Price_RWF: v.unitPrice,
+      Sales_Value_RWF: v.salesValue,
+      Payment_Status: v.paymentStatus,
+      Customer_Type: v.customerType,
+      Next_Follow_Up: v.nextFollowUpDate,
+      Remarks: v.remarks,
+    }));
+
+    function toCSV(rows: Record<string, string | number>[]): string {
+      if (!rows.length) return '';
+      const headers = Object.keys(rows[0]);
+      const lines = [
+        headers.join(','),
+        ...rows.map((r) =>
+          headers.map((h) => {
+            const val = String(r[h] ?? '');
+            return val.includes(',') || val.includes('"') || val.includes('\n')
+              ? `"${val.replace(/"/g, '""')}"`
+              : val;
+          }).join(',')
+        ),
+      ];
+      return lines.join('\n');
+    }
+
+    const kpiCSV = toCSV(kpiRows);
+    const visitCSV = toCSV(visitRows);
+    const combined = `KPI SUMMARY — ${monthLabel}\n${kpiCSV}\n\nVISIT LOGS — ${monthLabel}\n${visitCSV}`;
+
+    const blob = new Blob([combined], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dashboard_${monthPrefix}_${canViewAllReps ? 'all_reps' : currentUser?.name?.replace(/\s+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // Show loading state while user profile/role is being fetched
   if (profileLoading) {
@@ -78,6 +162,15 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Export CSV */}
+            <button
+              onClick={exportDashboardCSV}
+              className="flex items-center gap-2 bg-card border border-border text-foreground px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+              title="Export KPIs and visit logs to CSV"
+            >
+              <Download size={14} />
+              Export CSV
+            </button>
             {/* Global Month Selector */}
             <div className="relative">
               <select
