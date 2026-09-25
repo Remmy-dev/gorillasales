@@ -6,6 +6,7 @@ import { ConfigStore } from '@/lib/configStore';
 import LookupTableEditor from './LookupTableEditor';
 import MonthlyTargetsEditor from './MonthlyTargetsEditor';
 import CommissionRulesEditor from './CommissionRulesEditor';
+import CustomFieldsEditor from './CustomFieldsEditor';
 import {
   Users,
   Tag,
@@ -19,10 +20,11 @@ import {
   Target,
   DollarSign,
   List,
+  Sparkles,
 } from 'lucide-react';
 import { DEFAULT_CONFIG } from '@/lib/configStore';
 
-type TabId = 'lookup' | 'targets' | 'commission';
+type TabId = 'lookup' | 'targets' | 'commission' | 'custom-fields';
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; description: string }[] = [
   {
@@ -42,6 +44,12 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; description: stri
     label: 'Commission & Bonuses',
     icon: <DollarSign size={15} />,
     description: 'Define commission percentages and flat bonuses triggered at achievement thresholds.',
+  },
+  {
+    id: 'custom-fields',
+    label: 'Dynamic Custom Fields (Twenty Engine)',
+    icon: <Sparkles size={15} />,
+    description: 'Extend customer, visit, deal, and product schemas on-the-fly with dynamic custom attributes.',
   },
 ];
 
@@ -224,6 +232,8 @@ export default function ConfigAdminClient() {
           onChange={handleChange('commissionRules') as (rules: import('@/lib/configStore').CommissionRule[]) => void}
         />
       )}
+
+      {activeTab === 'custom-fields' && <CustomFieldsEditor />}
     </div>
   );
 }
