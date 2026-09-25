@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { getSession } from './auth';
 
 export interface TenantContext {
   organizationId: string;
@@ -8,11 +9,19 @@ export interface TenantContext {
 
 /**
  * Resolves the active tenant context for Server Actions.
- * In full production, this extracts the tenantId & user from session/JWT cookies.
- * For initial setup, it resolves the default seeded organization ('gorilla-coffee').
+ * First checks JWT session cookie; falls back to default tenant if unauthenticated.
  */
 export async function getTenantContext(): Promise<TenantContext> {
   try {
+    const session = await getSession();
+    if (session) {
+      return {
+        organizationId: session.organizationId,
+        userId: session.userId,
+        role: session.role,
+      };
+    }
+
     const org = await prisma.organization.findFirst({
       where: { slug: 'gorilla-coffee' },
       select: { id: true },
@@ -22,9 +31,8 @@ export async function getTenantContext(): Promise<TenantContext> {
       return { organizationId: org.id };
     }
   } catch (error) {
-    console.warn('⚠️ Could not connect to database in getTenantContext. Falling back to default tenant ID.', error);
+    console.warn('⚠️ getTenantContext fallback:', error);
   }
 
-  // Default fallback tenant ID
   return { organizationId: 'gorilla-coffee-default' };
 }
