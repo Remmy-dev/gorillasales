@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
 
-export type UserRole = 'Sales Officer' | 'Manager' | 'Admin';
+export type UserRole = 'Sales Officer' | 'Manager' | 'Admin' | 'Sales Admin' | 'Sales Delivery Support' | 'Driver';
 
 export interface CurrentUser {
   name: string;

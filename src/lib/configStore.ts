@@ -121,8 +121,8 @@ export function loadConfig(): ConfigStore {
       const parsed = JSON.parse(stored) as ConfigStore;
       // Backfill new keys that may not exist in older stored configs
       const monthlyTargets = (parsed.monthlyTargets ?? DEFAULT_CONFIG.monthlyTargets).map((t) => ({
-        targetWeightKg: 0,
         ...t,
+        targetWeightKg: t.targetWeightKg ?? 0,
       }));
       return {
         ...DEFAULT_CONFIG,

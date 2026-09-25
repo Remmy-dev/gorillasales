@@ -1,0 +1,337 @@
+// GorillaSales Enterprise CRM & SFA Database Schema
+// Powered by Prisma ORM & PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. TENANCY & USER IDENTITIES
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  SALES_OFFICER
+  DELIVERY_SUPPORT
+  DRIVER
+}
+
+enum PaymentStatus {
+  PAID
+  CREDIT
+  PENDING
+  OVERDUE
+  PARTIAL
+}
+
+enum CustomerType {
+  NEW_CUSTOMER
+  EXISTING_CUSTOMER
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  BOOLEAN
+  MULTI_SELECT
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  currency    String   @default("RWF")
+  timezone    String   @default("Africa/Kigali")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users                 User[]
+  customers             Customer[]
+  products              Product[]
+  visitLogs             VisitLog[]
+  pipelineStages        PipelineStage[]
+  pipelineDeals         PipelineDeal[]
+  monthlyTargets        MonthlyTarget[]
+  commissionRules       CommissionRule[]
+  customFieldDefs       CustomFieldDefinition[]
+  customFieldValues     CustomFieldValue[]
+  auditLogs             AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String       @unique
+  name           String
+  initials       String
+  role           UserRole     @default(SALES_OFFICER)
+  avatarUrl      String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  assignedCustomers Customer[]     @relation("CustomerSalesperson")
+  visitLogs         VisitLog[]     @relation("VisitSalesperson")
+  deals             PipelineDeal[] @relation("DealSalesperson")
+  targets           MonthlyTarget[]
+  auditLogs         AuditLog[]
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+// ==========================================
+// 2. CRM CORE ENTITIES
+// ==========================================
+
+model Customer {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  name               String
+  code               String?
+  category           String       // e.g. Hotels, Coffee Shops, Supermarkets
+  customerType       CustomerType @default(EXISTING_CUSTOMER)
+  area               String       // e.g. Kigali Centre, Remera, Gisozi
+  contactPerson      String?
+  email              String?
+  phone              String?
+  address            String?
+  salespersonId      String?
+  outstandingBalance Float        @default(0.0)
+  creditLimit        Float        @default(0.0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  salesperson        User?        @relation("CustomerSalesperson", fields: [salespersonId], references: [id], onDelete: SetNull)
+
+  visitLogs          VisitLog[]
+  deals              PipelineDeal[]
+
+  @@index([organizationId])
+  @@index([salespersonId])
+  @@map("customers")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // e.g. 250G Roasted Coffee, 500G MG
+  sku            String?
+  category       String   // e.g. Roasted Coffee, Instant, Beans
+  unitPrice      Float
+  unitOfMeasure  String   @default("KG") // e.g. KG, Pack, Bottle
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  visitLogs      VisitLog[]
+
+  @@index([organizationId])
+  @@map("products")
+}
+
+// ==========================================
+// 3. SALES FORCE AUTOMATION (SFA)
+// ==========================================
+
+model VisitLog {
+  id               String        @id @default(cuid())
+  organizationId   String
+  salespersonId    String
+  customerId       String
+  dateOfVisit      DateTime
+  visitOutcome     String        // e.g. Order Placed, Visit Only, Follow-up Required
+  productId        String?
+  quantity         Float         @default(0)
+  unitPrice        Float         @default(0)
+  salesValue       Float         @default(0)
+  paymentStatus    PaymentStatus @default(PENDING)
+  nextFollowUpDate DateTime?
+  remarks          String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  salesperson      User          @relation("VisitSalesperson", fields: [salespersonId], references: [id], onDelete: Cascade)
+  customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product          Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([salespersonId])
+  @@index([customerId])
+  @@index([dateOfVisit])
+  @@map("visit_logs")
+}
+
+// ==========================================
+// 4. PIPELINE & DEAL MANAGEMENT
+// ==========================================
+
+model PipelineStage {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // e.g. Lead, Contacted, Proposal, Negotiation, Closing, Won, Lost
+  probability    Float    @default(0) // 0 - 100 %
+  sortOrder      Int      @default(0)
+  color          String?  // hex code
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals          PipelineDeal[]
+
+  @@index([organizationId])
+  @@map("pipeline_stages")
+}
+
+model PipelineDeal {
+  id               String   @id @default(cuid())
+  organizationId   String
+  title            String
+  customerId       String
+  salespersonId    String
+  stageId          String
+  potentialValue   Float    @default(0)
+  probability      Float    @default(0)
+  weightedValue    Float    @default(0)
+  lastContact      DateTime @default(now())
+  nextAction       String?
+  followUpDate     DateTime?
+  remarks          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  salesperson      User          @relation("DealSalesperson", fields: [salespersonId], references: [id], onDelete: Cascade)
+  stage            PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([salespersonId])
+  @@index([stageId])
+  @@map("pipeline_deals")
+}
+
+// ==========================================
+// 5. TARGETS & COMMISSION ENGINE
+// ==========================================
+
+model MonthlyTarget {
+  id             String   @id @default(cuid())
+  organizationId String
+  salespersonId  String
+  month          Int      // 0 - 11 (or 1 - 12)
+  year           Int
+  targetAmount   Float    // Target Revenue in RWF
+  targetWeightKg Float    @default(0) // Target Volume in KG
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  salesperson    User         @relation(fields: [salespersonId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, salespersonId, month, year])
+  @@index([organizationId])
+  @@map("monthly_targets")
+}
+
+model CommissionRule {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   // e.g. Base Commission, Target Bonus
+  ruleType       String   // "percentage" | "flat"
+  value          Float    // % or flat RWF amount
+  thresholdPct   Float    @default(0) // Min target achievement % to trigger rule
+  description    String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("commission_rules")
+}
+
+// ==========================================
+// 6. TWENTY CRM-STYLE DYNAMIC CUSTOM FIELDS
+// ==========================================
+
+model CustomFieldDefinition {
+  id             String    @id @default(cuid())
+  organizationId String
+  entityType     String    // "CUSTOMER" | "VISIT_LOG" | "DEAL" | "PRODUCT"
+  name           String    // e.g. "Coffee Roaster Model"
+  fieldKey       String    // e.g. "coffee_roaster_model"
+  fieldType      FieldType @default(TEXT)
+  options        Json?     // Array of select options for SELECT / MULTI_SELECT types
+  isRequired     Boolean   @default(false)
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  values         CustomFieldValue[]
+
+  @@unique([organizationId, entityType, fieldKey])
+  @@index([organizationId])
+  @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id                String   @id @default(cuid())
+  organizationId    String
+  entityType        String   // "CUSTOMER" | "VISIT_LOG" | "DEAL" | "PRODUCT"
+  entityId          String   // ID of target Customer, VisitLog, etc.
+  fieldDefinitionId String
+  value             Json     // Stored value (String, Number, Array, Boolean)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fieldDefinition   CustomFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId, fieldDefinitionId])
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("custom_field_values")
+}
+
+// ==========================================
+// 7. AUDIT & ENTERPRISE COMPLIANCE
+// ==========================================
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String   // e.g. "CREATE_VISIT_LOG", "UPDATE_COMMISSION_RULE"
+  entityType     String   // e.g. "VisitLog", "CommissionRule"
+  entityId       String?
+  payload        Json?    // Snapshot of change or metadata
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("audit_logs")
+}
