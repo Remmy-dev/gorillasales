@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import SalesEntryForm from './SalesEntryForm';
 import RecentEntriesTable from './RecentEntriesTable';
 import { visitLogs, VisitLog, SALESPEOPLE } from '@/lib/mockData';
 import { ClipboardList, TrendingUp, ChevronDown } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
+import { getVisitLogs } from '@/actions/visits';
 
 export default function DailySalesEntryClient() {
   const { currentUser, canViewAllReps } = useUser();
@@ -13,6 +14,18 @@ export default function DailySalesEntryClient() {
   const [selectedRep, setSelectedRep] = useState<string>(canViewAllReps ? '' : currentUser.name);
 
   const effectiveRep = canViewAllReps ? selectedRep : currentUser.name;
+
+  useEffect(() => {
+    let isMounted = true;
+    getVisitLogs().then((data) => {
+      if (isMounted && data.length > 0) {
+        setEntries(data as any);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmitSuccess = (
     entry: Omit<VisitLog, 'timestamp'> & { salesValue: number; id: string }

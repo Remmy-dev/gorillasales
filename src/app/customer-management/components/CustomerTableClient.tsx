@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Eye, X, AlertTriangle, Download, Plus } from 'lucide-react';
 import { customers as initialCustomers, Customer, formatRWF } from '@/lib/mockData';
 import Badge from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import CustomerDetailPanel from './CustomerDetailPanel';
 import WeeklyReportExport from './WeeklyReportExport';
 import { useConfig } from '@/context/ConfigContext';
 import { useUser } from '@/context/UserContext';
+import { getCustomers, createCustomer } from '@/actions/customers';
 
 type SortKey = keyof Customer;
 
@@ -99,6 +100,37 @@ export default function CustomerTableClient() {
   const [formData, setFormData] = useState<NewCustomerForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewCustomerForm, string>>>({});
   const [addSuccess, setAddSuccess] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    getCustomers().then((data) => {
+      if (isMounted && data.length > 0) {
+        setCustomerList(
+          data.map((c) => ({
+            id: c.id,
+            name: c.name,
+            category: c.category,
+            area: c.area,
+            contactPerson: c.contactPerson || '—',
+            phone: c.phone || '—',
+            salesperson: c.salespersonName || 'Karenzi Remmy',
+            mainProduct: '250G Roasted Coffee',
+            monthlyPotential: c.creditLimit || 2000000,
+            monthlyCapacity: c.outstandingBalance || 0,
+            status: 'Active',
+            nextFollowUp: c.lastVisitDate || '2026-09-18',
+            visitsThisMonth: c.visitCount || 1,
+            ordersThisMonth: 1,
+            lastOrderDate: c.lastVisitDate || '2026-09-04',
+            remarks: 'Loaded from Database',
+          }))
+        );
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return customerList.filter((c) => {
@@ -198,34 +230,50 @@ export default function CustomerTableClient() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleAddCustomer = () => {
+  const handleAddCustomer = async () => {
     if (!validateForm()) return;
-    const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
-      name: formData.name.trim(),
-      category: formData.category,
-      area: formData.area.trim(),
-      contactPerson: formData.contactPerson.trim(),
-      phone: formData.phone.trim() || '—',
-      salesperson: formData.salesperson,
-      mainProduct: formData.mainProduct || '—',
-      monthlyPotential: Number(formData.monthlyPotential) || 0,
-      monthlyCapacity: 0,
-      status: formData.status,
-      nextFollowUp: '',
-      visitsThisMonth: 0,
-      ordersThisMonth: 0,
-      lastOrderDate: '—',
-      remarks: formData.remarks.trim(),
-    };
-    setCustomerList((prev) => [newCustomer, ...prev]);
-    setAddSuccess(true);
-    setTimeout(() => {
-      setAddSuccess(false);
-      setShowAddModal(false);
-      setFormData(EMPTY_FORM);
-      setFormErrors({});
-    }, 1200);
+
+    try {
+      const res = await createCustomer({
+        name: formData.name.trim(),
+        category: formData.category,
+        area: formData.area.trim(),
+        contactPerson: formData.contactPerson.trim(),
+        phone: formData.phone.trim(),
+        salespersonId: formData.salesperson,
+        creditLimit: Number(formData.monthlyPotential) || 0,
+      });
+
+      const newCustomer: Customer = {
+        id: res.customer?.id || `cust-${Date.now()}`,
+        name: formData.name.trim(),
+        category: formData.category,
+        area: formData.area.trim(),
+        contactPerson: formData.contactPerson.trim(),
+        phone: formData.phone.trim() || '—',
+        salesperson: formData.salesperson,
+        mainProduct: formData.mainProduct || '—',
+        monthlyPotential: Number(formData.monthlyPotential) || 0,
+        monthlyCapacity: 0,
+        status: formData.status,
+        nextFollowUp: '',
+        visitsThisMonth: 0,
+        ordersThisMonth: 0,
+        lastOrderDate: '—',
+        remarks: formData.remarks.trim(),
+      };
+
+      setCustomerList((prev) => [newCustomer, ...prev]);
+      setAddSuccess(true);
+      setTimeout(() => {
+        setAddSuccess(false);
+        setShowAddModal(false);
+        setFormData(EMPTY_FORM);
+        setFormErrors({});
+      }, 1200);
+    } catch (err: any) {
+      alert(`Error creating customer: ${err.message}`);
+    }
   };
 
   const handleCloseModal = () => {
