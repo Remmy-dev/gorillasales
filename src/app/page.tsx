@@ -32,7 +32,7 @@ const DEMO_USERS = [
 
 export default function PublicHomePage() {
   const { currentUser } = useUser();
-  const isLoggedIn = !!currentUser?.email;
+  const isLoggedIn = !!currentUser?.name;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-yellow-500 selection:text-slate-950">
