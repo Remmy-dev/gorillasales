@@ -21,6 +21,7 @@ import {
   Kanban,
   TrendingUp,
   ShieldCheck,
+  Trophy,
 } from 'lucide-react';
 import { useUser, MOCK_USERS } from '@/context/UserContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,6 +73,11 @@ const navItems: NavItem[] = [
     label: 'Monthly Report',
     href: '/monthly-report',
     icon: <BarChart2 size={20} />,
+  },
+  {
+    label: 'Leaderboard',
+    href: '/leaderboard',
+    icon: <Trophy size={20} />,
   },
   {
     label: 'Config & Master Lists',

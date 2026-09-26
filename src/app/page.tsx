@@ -5,6 +5,7 @@ import AppLayout from '@/components/AppLayout';
 import DashboardKpiGrid from './components/DashboardKpiGrid';
 import RepTargetsTable from './components/RepTargetsTable';
 import OverdueFollowUpsFeed from './components/OverdueFollowUpsFeed';
+import MobileDashboard from './components/MobileDashboard';
 import { useUser } from '@/context/UserContext';
 import { pipelineDeals, formatRWF, AVAILABLE_MONTHS, getMonthTargets, visitLogs } from '@/lib/mockData';
 import { ChevronDown, Download } from 'lucide-react';
@@ -150,6 +151,13 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
+      {/* Mobile view — portrait-friendly for field reps */}
+      <div className="block md:hidden">
+        <MobileDashboard selectedMonth={selectedMonth} monthLabel={monthLabel} />
+      </div>
+
+      {/* Desktop/tablet full dashboard */}
+      <div className="hidden md:block">
       <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto space-y-6">
         {/* Page header */}
         <div className="flex items-start justify-between flex-wrap gap-3">
@@ -401,6 +409,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </AppLayout>
   );
