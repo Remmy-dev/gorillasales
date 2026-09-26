@@ -96,6 +96,7 @@ export default function CustomerTableClient() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState<NewCustomerForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewCustomerForm, string>>>({});
   const [addSuccess, setAddSuccess] = useState(false);
@@ -164,6 +165,49 @@ export default function CustomerTableClient() {
       <ChevronDown size={11} className="text-muted-foreground opacity-30" />
     );
 
+  function exportCustomersCSV() {
+    const rows = sorted.map((c) => ({
+      Name: c.name,
+      Category: c.category,
+      Area: c.area,
+      Contact_Person: c.contactPerson,
+      Phone: c.phone,
+      Salesperson: c.salesperson,
+      Main_Product: c.mainProduct,
+      Monthly_Potential_RWF: c.monthlyPotential,
+      Monthly_Capacity_RWF: c.monthlyCapacity,
+      Status: c.status,
+      Visits_This_Month: c.visitsThisMonth,
+      Orders_This_Month: c.ordersThisMonth,
+      Last_Order_Date: c.lastOrderDate,
+      Next_Follow_Up: c.nextFollowUp || '—',
+      Remarks: c.remarks || '',
+    }));
+
+    if (!rows.length) return;
+
+    const headers = Object.keys(rows[0]);
+    const lines = [
+      headers.join(','),
+      ...rows.map((r) =>
+        headers.map((h) => {
+          const val = String((r as Record<string, string | number>)[h] ?? '');
+          return val.includes(',') || val.includes('"') || val.includes('\n')
+            ? `"${val.replace(/"/g, '""')}"`
+            : val;
+        }).join(',')
+      ),
+    ];
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Summary stats
   const activeCount = customerList.filter((c) => c.status === 'Active').length;
   const prospectCount = customerList.filter((c) => c.status === 'Prospect').length;
@@ -198,8 +242,56 @@ export default function CustomerTableClient() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleEditCustomer = (customer: Customer) => {
+    setFormData({
+      name: customer.name,
+      category: customer.category,
+      area: customer.area,
+      contactPerson: customer.contactPerson,
+      phone: customer.phone === '—' ? '' : customer.phone,
+      salesperson: customer.salesperson,
+      mainProduct: customer.mainProduct === '—' ? '' : customer.mainProduct,
+      monthlyPotential: customer.monthlyPotential > 0 ? String(customer.monthlyPotential) : '',
+      status: customer.status,
+      remarks: customer.remarks || '',
+    });
+    setEditingCustomer(customer);
+    setShowAddModal(true);
+  };
+
   const handleAddCustomer = () => {
     if (!validateForm()) return;
+    if (editingCustomer) {
+      // Edit mode
+      setCustomerList((prev) =>
+        prev.map((c) =>
+          c.id === editingCustomer.id
+            ? {
+                ...c,
+                name: formData.name.trim(),
+                category: formData.category,
+                area: formData.area.trim(),
+                contactPerson: formData.contactPerson.trim(),
+                phone: formData.phone.trim() || '—',
+                salesperson: formData.salesperson,
+                mainProduct: formData.mainProduct || '—',
+                monthlyPotential: Number(formData.monthlyPotential) || 0,
+                status: formData.status,
+                remarks: formData.remarks.trim(),
+              }
+            : c
+        )
+      );
+      setAddSuccess(true);
+      setTimeout(() => {
+        setAddSuccess(false);
+        setShowAddModal(false);
+        setEditingCustomer(null);
+        setFormData(EMPTY_FORM);
+        setFormErrors({});
+      }, 1200);
+      return;
+    }
     const newCustomer: Customer = {
       id: `cust-${Date.now()}`,
       name: formData.name.trim(),
@@ -230,6 +322,7 @@ export default function CustomerTableClient() {
 
   const handleCloseModal = () => {
     setShowAddModal(false);
+    setEditingCustomer(null);
     setFormData(EMPTY_FORM);
     setFormErrors({});
     setAddSuccess(false);
@@ -249,6 +342,7 @@ export default function CustomerTableClient() {
         <CustomerDetailPanel
           customer={selectedCustomer}
           onClose={() => setSelectedCustomer(null)}
+          onEdit={handleEditCustomer}
         />
       )}
 
@@ -259,7 +353,9 @@ export default function CustomerTableClient() {
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Add New Customer</h2>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+                </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">All customers must be assigned a category upon entry</p>
               </div>
               <button
@@ -433,7 +529,7 @@ export default function CustomerTableClient() {
                     onClick={handleAddCustomer}
                     className="px-5 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors active:scale-95"
                   >
-                    Add Customer
+                    {editingCustomer ? 'Save Changes' : 'Add Customer'}
                   </button>
                 </div>
               </div>
@@ -454,6 +550,14 @@ export default function CustomerTableClient() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={exportCustomersCSV}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-muted transition-colors active:scale-95"
+              title="Export customer data to CSV"
+            >
+              <Download size={15} />
+              Export CSV
+            </button>
             <button
               onClick={() => setShowExport(true)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border text-foreground text-sm font-semibold rounded-lg hover:bg-muted transition-colors active:scale-95"

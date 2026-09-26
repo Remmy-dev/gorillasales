@@ -21,8 +21,11 @@ import {
   Kanban,
   TrendingUp,
   ShieldCheck,
+  Trophy,
 } from 'lucide-react';
 import { useUser, MOCK_USERS } from '@/context/UserContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface NavItem {
   label: string;
@@ -30,6 +33,7 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: number;
   managerOnly?: boolean;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -71,6 +75,11 @@ const navItems: NavItem[] = [
     icon: <BarChart2 size={20} />,
   },
   {
+    label: 'Leaderboard',
+    href: '/leaderboard',
+    icon: <Trophy size={20} />,
+  },
+  {
     label: 'Config & Master Lists',
     href: '/config',
     icon: <SlidersHorizontal size={20} />,
@@ -80,13 +89,13 @@ const navItems: NavItem[] = [
     label: 'User Management',
     href: '/user-management',
     icon: <ShieldCheck size={20} />,
-    managerOnly: true,
+    adminOnly: true,
   },
 ];
 
 const bottomItems = [
-  { label: 'Targets & Config', href: '#', icon: <Target size={20} /> },
-  { label: 'Settings', href: '#', icon: <Settings size={20} /> },
+  { label: 'Config & Settings', href: '/config', icon: <Target size={20} /> },
+  { label: 'Account Settings', href: '/account-settings', icon: <Settings size={20} /> },
 ];
 
 interface SidebarProps {
@@ -96,7 +105,9 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const { currentUser, setCurrentUser, canViewAllReps } = useUser();
+  const { currentUser, setCurrentUser, canViewAllReps, isAdmin } = useUser();
+  const { signOut } = useAuth();
+  const router = useRouter();
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   const isActive = (href: string) => {
@@ -105,6 +116,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   };
 
   const visibleNavItems = navItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
     if (item.managerOnly && !canViewAllReps) return false;
     return true;
   });
@@ -272,6 +284,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             collapsed ? 'justify-center px-2' : ''
           }`}
           title={collapsed ? 'Sign Out' : undefined}
+          onClick={async () => {
+            try {
+              await signOut();
+              router.replace('/login');
+              router.refresh();
+            } catch {}
+          }}
         >
           <LogOut size={20} className="shrink-0" />
           {!collapsed && <span className="text-sm">Sign Out</span>}
