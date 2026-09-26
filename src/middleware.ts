@@ -13,12 +13,13 @@ const MANAGER_ROUTES = ['/manager', '/config', '/user-management'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static files, api routes, and login
+  // Allow static files, api routes, login, and public homepage
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.') ||
-    pathname === '/login'
+    pathname === '/login' ||
+    pathname === '/'
   ) {
     return NextResponse.next();
   }

@@ -36,7 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: <LayoutDashboard size={20} />,
   },
   {
@@ -101,7 +101,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
 

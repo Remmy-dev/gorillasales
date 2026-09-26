@@ -14,7 +14,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const isHome = pathname === '/';
+  const isDashboard = pathname === '/dashboard';
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -67,26 +67,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <span className="font-semibold text-primary-foreground text-sm flex-1 truncate">
             GorillaSales
           </span>
-          {!isHome && (
+          {!isDashboard && (
             <Link
-              href="/"
+              href="/dashboard"
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-foreground/15 hover:bg-primary-foreground/25 text-primary-foreground text-xs font-medium transition-colors shrink-0 min-h-[36px]"
             >
               <Home size={14} />
-              <span>Home</span>
+              <span>Dashboard</span>
             </Link>
           )}
         </div>
 
-        {/* Desktop "Back to Home" bar — shown on all non-home pages */}
-        {!isHome && (
+        {/* Desktop topbar link to Dashboard */}
+        {!isDashboard && (
           <div className="hidden lg:flex items-center px-6 py-2 bg-card border-b border-border">
             <Link
-              href="/"
+              href="/dashboard"
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted hover:bg-accent hover:text-white text-muted-foreground hover:text-white text-xs font-medium transition-all duration-150 group"
             >
               <Home size={14} className="group-hover:scale-110 transition-transform" />
-              <span>Back to Home</span>
+              <span>Back to Dashboard</span>
             </Link>
           </div>
         )}
