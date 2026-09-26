@@ -136,8 +136,8 @@ export default function WeeklyReportExport({ onClose }: WeeklyReportExportProps)
               headStyles: { fillColor: [61, 46, 0], textColor: 255, fontStyle: 'bold' },
               alternateRowStyles: { fillColor: [254, 252, 232] },
               margin: { left: 14, right: 14 },
-              didDrawPage: (data: { cursor: { y: number } }) => {
-                yPos = data.cursor.y + 6;
+              didDrawPage: (data: { cursor?: { y: number } | null }) => {
+                if (data.cursor) yPos = data.cursor.y + 6;
               },
             });
 
@@ -200,7 +200,7 @@ export default function WeeklyReportExport({ onClose }: WeeklyReportExportProps)
         const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, WidthType, AlignmentType, BorderStyle } = await import('docx');
         const { saveAs } = await import('file-saver');
 
-        const children: (Paragraph | Table)[] = [
+        const children: (InstanceType<typeof Paragraph> | InstanceType<typeof Table>)[] = [
           new Paragraph({
             text: 'Rwanda Farmers Coffee Company — Weekly Sales Report',
             heading: HeadingLevel.HEADING_1,

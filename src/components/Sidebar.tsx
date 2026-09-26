@@ -23,6 +23,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useUser, MOCK_USERS } from '@/context/UserContext';
+import { logoutAction, loginAction } from '@/lib/auth';
 
 interface NavItem {
   label: string;
@@ -35,7 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: <LayoutDashboard size={20} />,
   },
   {
@@ -100,7 +101,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
 
@@ -268,7 +269,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Link>
         ))}
         <button
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 text-primary-foreground/50 hover:bg-negative/20 hover:text-negative group ${
+          onClick={async () => {
+            await logoutAction();
+            window.location.href = '/login';
+          }}
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-150 text-primary-foreground/50 hover:bg-negative/20 hover:text-negative group w-full text-left ${
             collapsed ? 'justify-center px-2' : ''
           }`}
           title={collapsed ? 'Sign Out' : undefined}

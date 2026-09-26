@@ -10,6 +10,7 @@ import {
   formatRWFFull,
 } from '@/lib/mockData';
 import { useConfig } from '@/context/ConfigContext';
+import { createVisitLog } from '@/actions/visits';
 
 interface VisitFormData {
   salesperson: string;
@@ -88,40 +89,76 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
     }
   }, [watchedCustomer, setValue]);
 
-  // Backend integration point: POST /api/visit-logs
+  // Wired to Server Action: createVisitLog
   const onSubmit = async (data: VisitFormData) => {
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    const newEntry = {
-      ...data,
-      salesValue,
-      id: `visit-${Date.now()}`,
-    };
-    onSubmitSuccess(newEntry);
-    setSubmitSuccess(true);
-    toast.success('Visit log saved successfully', {
-      description: `${data.customerName} · ${formatRWFFull(salesValue)}`,
-    });
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      reset({
-        salesperson: data.salesperson,
+    try {
+      const res = await createVisitLog({
+        salespersonId: data.salesperson,
+        customerId: data.customerName,
         dateOfVisit: data.dateOfVisit,
-        customerName: '',
-        area: '',
-        customerCategory: '',
-        visitOutcome: '',
-        productCategory: '',
-        quantity: 0,
-        unitPrice: 0,
-        paymentStatus: '',
-        customerType: '',
-        nextFollowUpDate: '',
-        remarks: '',
+        visitOutcome: data.visitOutcome,
+        productCategory: data.productCategory,
+        quantity: Number(data.quantity) || 0,
+        unitPrice: Number(data.unitPrice) || 0,
+        paymentStatus: data.paymentStatus as any,
+        nextFollowUpDate: data.nextFollowUpDate,
+        remarks: data.remarks,
       });
-      setSalesValue(0);
-    }, 2000);
-    setIsSubmitting(false);
+
+      const newEntry = res.visit
+        ? {
+            id: res.visit.id,
+            salesperson: res.visit.salesperson,
+            dateOfVisit: res.visit.dateOfVisit,
+            customerName: res.visit.customerName,
+            area: res.visit.area,
+            customerCategory: res.visit.customerCategory,
+            visitOutcome: res.visit.visitOutcome,
+            productCategory: res.visit.productCategory,
+            quantity: res.visit.quantity,
+            unitPrice: res.visit.unitPrice,
+            salesValue: res.visit.salesValue,
+            paymentStatus: res.visit.paymentStatus,
+            customerType: res.visit.customerType,
+            nextFollowUpDate: res.visit.nextFollowUpDate,
+            remarks: res.visit.remarks,
+          }
+        : {
+            ...data,
+            salesValue,
+            id: `visit-${Date.now()}`,
+          };
+
+      onSubmitSuccess(newEntry);
+      setSubmitSuccess(true);
+      toast.success('Visit log saved to database', {
+        description: `${data.customerName} · ${formatRWFFull(salesValue)}`,
+      });
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        reset({
+          salesperson: data.salesperson,
+          dateOfVisit: data.dateOfVisit,
+          customerName: '',
+          area: '',
+          customerCategory: '',
+          visitOutcome: '',
+          productCategory: '',
+          quantity: 0,
+          unitPrice: 0,
+          paymentStatus: '',
+          customerType: '',
+          nextFollowUpDate: '',
+          remarks: '',
+        });
+        setSalesValue(0);
+      }, 2000);
+    } catch (err: any) {
+      toast.error('Error saving visit log', { description: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass =

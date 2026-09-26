@@ -4,7 +4,8 @@ type BadgeVariant =
   | 'success' |'error' |'warning' |'info' |'neutral' |'accent' |'primary';
 
 interface BadgeProps {
-  label: string;
+  label?: string;
+  children?: React.ReactNode;
   variant?: BadgeVariant;
   size?: 'sm' | 'md';
   dot?: boolean;
@@ -32,6 +33,7 @@ const dotClasses: Record<BadgeVariant, string> = {
 
 export default function Badge({
   label,
+  children,
   variant = 'neutral',
   size = 'sm',
   dot = false,
@@ -47,7 +49,7 @@ export default function Badge({
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClasses[variant]}`}
         />
       )}
-      {label}
+      {children ?? label}
     </span>
   );
 }

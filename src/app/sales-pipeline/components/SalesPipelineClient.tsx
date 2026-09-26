@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LayoutGrid, List, TrendingUp, ChevronDown, GripVertical, Calendar, User, MapPin, ArrowRight, Filter, Download, FileText } from 'lucide-react';
 import { pipelineDeals, PipelineDeal, PIPELINE_STAGES, SALESPEOPLE, formatRWF } from '@/lib/mockData';
 import { useUser } from '@/context/UserContext';
 import SalesForecastingPanel from './SalesForecastingPanel';
+import { getPipelineDeals, updateDealStage } from '@/actions/deals';
 
 const STAGE_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
   Prospecting: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-400' },
@@ -39,6 +40,18 @@ export default function SalesPipelineClient() {
 
   const effectiveRep = canViewAllReps ? repFilter : currentUser.name;
 
+  useEffect(() => {
+    let isMounted = true;
+    getPipelineDeals().then((data) => {
+      if (isMounted && data.length > 0) {
+        setDeals(data as any);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredDeals = deals.filter((d) => {
     const matchRep = !effectiveRep || d.salesperson === effectiveRep;
     const matchStage = !stageFilter || d.stage === stageFilter;
@@ -65,9 +78,17 @@ export default function SalesPipelineClient() {
     setDragOverStage(stage);
   }
 
-  function handleDrop(e: React.DragEvent, targetStage: string) {
+  async function handleDrop(e: React.DragEvent, targetStage: string) {
     e.preventDefault();
     if (!draggedId) return;
+
+    const currentDeal = deals.find((d) => d.id === draggedId);
+    if (currentDeal) {
+      updateDealStage(currentDeal.id, targetStage).catch((err) =>
+        console.warn('Could not update deal stage in DB:', err)
+      );
+    }
+
     setDeals((prev) =>
       prev.map((d) => {
         if (d.id !== draggedId) return d;
