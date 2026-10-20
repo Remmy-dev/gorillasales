@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Loader2, Calculator, CheckCircle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
@@ -43,6 +43,12 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Derive today's date string once (YYYY-MM-DD) — stable across renders
+  const todayStr = React.useMemo(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -53,7 +59,7 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
   } = useForm<VisitFormData>({
     defaultValues: {
       salesperson: '',
-      dateOfVisit: '2026-09-04',
+      dateOfVisit: todayStr,
       customerName: '',
       area: '',
       customerCategory: '',
@@ -178,7 +184,20 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 id="dateOfVisit"
                 type="date"
                 className={inputClass}
-                {...register('dateOfVisit', { required: 'Date is required' })}
+                max={todayStr}
+                {...register('dateOfVisit', {
+                  required: 'Date of visit is required',
+                  validate: (value) => {
+                    if (!value) return 'Date of visit is required';
+                    const selected = new Date(value);
+                    const today = new Date(todayStr);
+                    if (selected > today) return 'Date cannot be in the future';
+                    const ninetyDaysAgo = new Date(today);
+                    ninetyDaysAgo.setDate(today.getDate() - 90);
+                    if (selected < ninetyDaysAgo) return 'Date cannot be more than 90 days in the past';
+                    return true;
+                  },
+                })}
               />
               {errors.dateOfVisit && (
                 <p className={errorClass}>{errors.dateOfVisit.message}</p>
@@ -228,7 +247,12 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 list="customerNameList"
                 className={inputClass}
                 placeholder="Type or select customer name..."
-                {...register('customerName', { required: 'Customer name is required' })}
+                {...register('customerName', {
+                  required: 'Customer name is required',
+                  validate: (value) =>
+                    value.trim().length >= 2 || 'Name must be at least 2 characters',
+                  maxLength: { value: 100, message: 'Name must be 100 characters or fewer' },
+                })}
               />
               <datalist id="customerNameList">
                 {customers.map((c) => (
@@ -253,7 +277,12 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 type="text"
                 className={inputClass}
                 placeholder="e.g. Kigali Centre"
-                {...register('area', { required: 'Area is required' })}
+                {...register('area', {
+                  required: 'Area is required',
+                  validate: (value) =>
+                    value.trim().length >= 2 || 'Area must be at least 2 characters',
+                  maxLength: { value: 100, message: 'Area must be 100 characters or fewer' },
+                })}
               />
               {errors.area && (
                 <p className={errorClass}>{errors.area.message}</p>
@@ -347,13 +376,21 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 <input
                   id="quantity"
                   type="number"
-                  min="0"
+                  min="1"
+                  step="1"
                   className={inputClass}
                   placeholder="0"
                   {...register('quantity', {
-                    required: watchedOutcome === 'Order Placed' ? 'Quantity required' : false,
-                    min: { value: 0, message: 'Must be 0 or more' },
+                    required: watchedOutcome === 'Order Placed' ? 'Quantity is required' : false,
                     valueAsNumber: true,
+                    validate: (value) => {
+                      if (watchedOutcome !== 'Order Placed') return true;
+                      if (!Number.isFinite(value)) return 'Enter a valid number';
+                      if (!Number.isInteger(value)) return 'Quantity must be a whole number';
+                      if (value < 1) return 'Quantity must be at least 1';
+                      if (value > 999999) return 'Quantity seems too large';
+                      return true;
+                    },
                   })}
                 />
                 {errors.quantity && (
@@ -369,13 +406,20 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 <input
                   id="unitPrice"
                   type="number"
-                  min="0"
+                  min="1"
+                  step="any"
                   className={inputClass}
                   placeholder="0"
                   {...register('unitPrice', {
-                    required: watchedOutcome === 'Order Placed' ? 'Unit price required' : false,
-                    min: { value: 0, message: 'Must be 0 or more' },
+                    required: watchedOutcome === 'Order Placed' ? 'Unit price is required' : false,
                     valueAsNumber: true,
+                    validate: (value) => {
+                      if (watchedOutcome !== 'Order Placed') return true;
+                      if (!Number.isFinite(value)) return 'Enter a valid price';
+                      if (value <= 0) return 'Unit price must be greater than 0';
+                      if (value > 1_000_000_000) return 'Unit price seems too large';
+                      return true;
+                    },
                   })}
                 />
                 {errors.unitPrice && (
@@ -441,11 +485,23 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 id="nextFollowUpDate"
                 type="date"
                 className={inputClass}
-                {...register('nextFollowUpDate')}
+                min={todayStr}
+                {...register('nextFollowUpDate', {
+                  validate: (value) => {
+                    if (!value) return true; // optional field
+                    const selected = new Date(value);
+                    const today = new Date(todayStr);
+                    if (selected < today) return 'Follow-up date must be today or in the future';
+                    return true;
+                  },
+                })}
               />
               <p className={helperClass}>
                 Leave blank if no follow-up is needed
               </p>
+              {errors.nextFollowUpDate && (
+                <p className={errorClass}>{errors.nextFollowUpDate.message}</p>
+              )}
             </div>
 
             {/* Remarks */}
@@ -458,8 +514,13 @@ export default function SalesEntryForm({ onSubmitSuccess }: SalesEntryFormProps)
                 rows={4}
                 className={`${inputClass} resize-none`}
                 placeholder="Any additional context about this visit..."
-                {...register('remarks')}
+                {...register('remarks', {
+                  maxLength: { value: 500, message: 'Remarks must be 500 characters or fewer' },
+                })}
               />
+              {errors.remarks && (
+                <p className={errorClass}>{errors.remarks.message}</p>
+              )}
             </div>
           </div>
         </div>

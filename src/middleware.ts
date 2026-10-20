@@ -1,0 +1,109 @@
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+
+function getProjectRef(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  return url.match(/https:\/\/([^.]+)\./)?.[1] ?? '';
+}
+
+function injectTokenFromHeader(request: NextRequest): void {
+  const token = request.headers.get('x-sb-token');
+  if (!token) return;
+  const hasCookie = request.cookies.getAll().some((c) => c.name.includes('auth-token'));
+  if (hasCookie) return;
+  request.cookies.set(`sb-${getProjectRef()}-auth-token`, token);
+}
+
+export async function middleware(request: NextRequest) {
+  injectTokenFromHeader(request);
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            supabaseResponse.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+
+  // Public paths that don't require auth
+  const publicPaths = ['/login', '/auth/callback', '/verify-email'];
+  const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
+
+  // Redirect unauthenticated users to login
+  if (!user && !isPublicPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users away from login page
+  if (user && pathname === '/login') {
+    // If email not verified, send to verify-email page
+    if (!user.email_confirmed_at) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/verify-email';
+      return NextResponse.redirect(url);
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
+  }
+
+  // Block unverified users from accessing dashboard routes
+  if (user && !user.email_confirmed_at && !isPublicPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/verify-email';
+    return NextResponse.redirect(url);
+  }
+
+  // Restrict /user-management to Admin role only
+  if (user && pathname.startsWith('/user-management')) {
+    const userRole =
+      user.raw_user_meta_data?.role ||
+      user.user_metadata?.role;
+    const isAdmin =
+      userRole === 'Admin' ||
+      userRole === 'admin';
+
+    if (!isAdmin) {
+      // Also check user_profiles table for role
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const profileRole = profile?.role?.toLowerCase();
+      if (profileRole !== 'admin') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  return supabaseResponse;
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+};

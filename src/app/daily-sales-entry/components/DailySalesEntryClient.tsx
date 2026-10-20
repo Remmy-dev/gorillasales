@@ -10,8 +10,9 @@ import { useUser } from '@/context/UserContext';
 export default function DailySalesEntryClient() {
   const { currentUser, canViewAllReps } = useUser();
   const [entries, setEntries] = useState<VisitLog[]>(visitLogs);
-  const [selectedRep, setSelectedRep] = useState<string>(canViewAllReps ? '' : currentUser.name);
+  const [selectedRep, setSelectedRep] = useState<string>('');
 
+  // Sync selectedRep when role/user changes
   const effectiveRep = canViewAllReps ? selectedRep : currentUser.name;
 
   const handleSubmitSuccess = (

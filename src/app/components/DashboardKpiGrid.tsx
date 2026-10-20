@@ -2,43 +2,52 @@
 
 import React from 'react';
 import { TrendingUp, Target, Users, ShoppingBag, AlertTriangle, UserPlus, Layers, Trophy, Activity } from 'lucide-react';
-import { monthlyTargets, pipelineDeals, overdueFollowUps, formatRWF } from '@/lib/mockData';
+import { pipelineDeals, overdueFollowUps, formatRWF, getMonthTargets } from '@/lib/mockData';
 import { useUser } from '@/context/UserContext';
 
-function computeKpisForAll() {
-  const totalTarget = monthlyTargets?.reduce((s, t) => s + t?.target, 0);
-  const totalActual = monthlyTargets?.reduce((s, t) => s + t?.actualSales, 0);
-  const achievementPct = (totalActual / totalTarget) * 100;
-  const newCustomers = monthlyTargets?.reduce((s, t) => s + t?.newCustomers, 0);
-  const totalVisits = monthlyTargets?.reduce((s, t) => s + t?.customerVisits, 0);
-  const totalOrders = monthlyTargets?.reduce((s, t) => s + t?.orders, 0);
+function computeKpisForAll(monthKey: string) {
+  const targets = getMonthTargets(monthKey);
+  const totalTarget = targets?.reduce((s, t) => s + t?.target, 0);
+  const totalActual = targets?.reduce((s, t) => s + t?.actualSales, 0);
+  const achievementPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
+  const newCustomers = targets?.reduce((s, t) => s + t?.newCustomers, 0);
+  const totalVisits = targets?.reduce((s, t) => s + t?.customerVisits, 0);
+  const totalOrders = targets?.reduce((s, t) => s + t?.orders, 0);
+  const totalKg = targets?.reduce((s, t) => s + (t?.kgSold ?? 0), 0);
   const outstandingFollowUps = overdueFollowUps?.length;
   const pipelinePotential = pipelineDeals?.reduce((s, d) => s + d?.potentialValue, 0);
   const weightedPipeline = pipelineDeals?.reduce((s, d) => s + d?.weightedValue, 0);
-  const topRep = [...monthlyTargets]?.sort((a, b) => b?.actualSales - a?.actualSales)?.[0];
-  return { totalTarget, totalActual, achievementPct, newCustomers, totalVisits, totalOrders, outstandingFollowUps, pipelinePotential, weightedPipeline, topRep };
+  const topRep = [...targets]?.sort((a, b) => b?.actualSales - a?.actualSales)?.[0];
+  return { totalTarget, totalActual, achievementPct, newCustomers, totalVisits, totalOrders, outstandingFollowUps, pipelinePotential, weightedPipeline, topRep, totalKg };
 }
 
-function computeKpisForRep(repName: string) {
-  const repTarget = monthlyTargets?.find((t) => t?.salesperson === repName);
+function computeKpisForRep(repName: string, monthKey: string) {
+  const targets = getMonthTargets(monthKey);
+  const repTarget = targets?.find((t) => t?.salesperson === repName);
   const totalTarget = repTarget?.target ?? 0;
   const totalActual = repTarget?.actualSales ?? 0;
   const achievementPct = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
   const newCustomers = repTarget?.newCustomers ?? 0;
   const totalVisits = repTarget?.customerVisits ?? 0;
   const totalOrders = repTarget?.orders ?? 0;
+  const totalKg = repTarget?.kgSold ?? 0;
   const outstandingFollowUps = overdueFollowUps?.filter((f) => f?.salesperson === repName)?.length ?? 0;
   const myDeals = pipelineDeals?.filter((d) => d?.salesperson === repName);
   const pipelinePotential = myDeals?.reduce((s, d) => s + d?.potentialValue, 0);
   const weightedPipeline = myDeals?.reduce((s, d) => s + d?.weightedValue, 0);
-  return { totalTarget, totalActual, achievementPct, newCustomers, totalVisits, totalOrders, outstandingFollowUps, pipelinePotential, weightedPipeline, topRep: repTarget };
+  return { totalTarget, totalActual, achievementPct, newCustomers, totalVisits, totalOrders, outstandingFollowUps, pipelinePotential, weightedPipeline, topRep: repTarget, totalKg };
 }
 
-export default function DashboardKpiGrid() {
+interface DashboardKpiGridProps {
+  selectedMonth: string;
+  monthLabel: string;
+}
+
+export default function DashboardKpiGrid({ selectedMonth, monthLabel }: DashboardKpiGridProps) {
   const { currentUser, canViewAllReps } = useUser();
   const kpis = canViewAllReps
-    ? computeKpisForAll()
-    : computeKpisForRep(currentUser.name);
+    ? computeKpisForAll(selectedMonth)
+    : computeKpisForRep(currentUser.name, selectedMonth);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
@@ -47,13 +56,17 @@ export default function DashboardKpiGrid() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-primary-foreground/50 mb-1">
-              {canViewAllReps ? 'Total Actual Sales — Sep 2026' : 'My Actual Sales — Sep 2026'}
+              {canViewAllReps ? `Total Actual Sales — ${monthLabel}` : `My Actual Sales — ${monthLabel}`}
             </p>
             <p className="text-hero-metric text-primary-foreground font-tabular">
               {formatRWF(kpis?.totalActual)}
             </p>
-            <p className="text-sm text-primary-foreground/60 mt-1 font-tabular">
+            <p className="text-sm text-primary-foreground/60 mt-0.5 font-tabular">
               of {formatRWF(kpis?.totalTarget)} target
+            </p>
+            {/* KG display */}
+            <p className="text-sm text-primary-foreground/70 mt-1 font-tabular font-semibold">
+              {kpis?.totalKg > 0 ? `${kpis.totalKg.toLocaleString()} KG sold` : '—'}
             </p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center shrink-0">
@@ -153,7 +166,7 @@ export default function DashboardKpiGrid() {
         <p className="text-3xl font-bold text-foreground font-tabular">
           {kpis?.totalVisits}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">This month</p>
+        <p className="text-xs text-muted-foreground mt-1">{monthLabel}</p>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between">
@@ -173,6 +186,7 @@ export default function DashboardKpiGrid() {
         </div>
       </div>
 
+      {/* New Customers card */}
       <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between">
         <div className="flex items-start justify-between mb-2">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -183,7 +197,7 @@ export default function DashboardKpiGrid() {
         <p className="text-3xl font-bold text-foreground font-tabular">
           {kpis?.newCustomers}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">Acquired this month</p>
+        <p className="text-xs text-muted-foreground mt-1">Acquired · {monthLabel}</p>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 flex flex-col justify-between">

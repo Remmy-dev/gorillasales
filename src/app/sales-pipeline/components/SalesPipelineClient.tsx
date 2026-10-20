@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { LayoutGrid, List, TrendingUp, ChevronDown, GripVertical, Calendar, User, MapPin, ArrowRight, Filter, Download, FileText } from 'lucide-react';
+import { LayoutGrid, List, TrendingUp, ChevronDown, GripVertical, Calendar, User, MapPin, ArrowRight, Filter, Download, FileText, Plus, X } from 'lucide-react';
 import { pipelineDeals, PipelineDeal, PIPELINE_STAGES, SALESPEOPLE, formatRWF } from '@/lib/mockData';
 import { useUser } from '@/context/UserContext';
 import SalesForecastingPanel from './SalesForecastingPanel';
@@ -26,6 +26,192 @@ const PROBABILITY_MAP: Record<string, number> = {
 
 type ViewMode = 'kanban' | 'table';
 
+interface NewDealForm {
+  customer: string;
+  area: string;
+  salesperson: string;
+  stage: string;
+  potentialValue: string;
+  followUpDate: string;
+  nextAction: string;
+}
+
+const EMPTY_DEAL_FORM: NewDealForm = {
+  customer: '',
+  area: '',
+  salesperson: '',
+  stage: 'Prospecting',
+  potentialValue: '',
+  followUpDate: '',
+  nextAction: '',
+};
+
+function AddDealModal({
+  onClose,
+  onAdd,
+  currentUserName,
+  canViewAllReps,
+}: {
+  onClose: () => void;
+  onAdd: (deal: PipelineDeal) => void;
+  currentUserName: string;
+  canViewAllReps: boolean;
+}) {
+  const [form, setForm] = useState<NewDealForm>({
+    ...EMPTY_DEAL_FORM,
+    salesperson: canViewAllReps ? '' : currentUserName,
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof NewDealForm, string>>>({});
+
+  const validate = () => {
+    const e: Partial<Record<keyof NewDealForm, string>> = {};
+    if (!form.customer.trim()) e.customer = 'Customer name is required';
+    if (!form.area.trim()) e.area = 'Area is required';
+    if (!form.salesperson) e.salesperson = 'Assign a sales rep';
+    if (!form.potentialValue || Number(form.potentialValue) <= 0) e.potentialValue = 'Enter a valid value';
+    if (!form.followUpDate) e.followUpDate = 'Follow-up date is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    const prob = PROBABILITY_MAP[form.stage] ?? 20;
+    const potVal = Number(form.potentialValue);
+    const newDeal: PipelineDeal = {
+      id: `deal-${Date.now()}`,
+      customer: form.customer.trim(),
+      area: form.area.trim(),
+      salesperson: form.salesperson,
+      stage: form.stage,
+      potentialValue: potVal,
+      probability: prob,
+      weightedValue: Math.round(potVal * (prob / 100)),
+      followUpDate: form.followUpDate,
+      nextAction: form.nextAction.trim(),
+    };
+    onAdd(newDeal);
+    onClose();
+  };
+
+  const inputClass = 'w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40 transition-colors';
+  const labelClass = 'block text-xs font-semibold text-muted-foreground mb-1.5';
+  const errorClass = 'text-xs text-red-500 mt-1';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-card rounded-xl shadow-2xl border border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h3 className="text-base font-semibold text-foreground">Add New Deal</h3>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Customer Name *</label>
+              <input
+                type="text"
+                placeholder="e.g. Kigali Grand Hotel"
+                value={form.customer}
+                onChange={(e) => setForm((p) => ({ ...p, customer: e.target.value }))}
+                className={inputClass}
+              />
+              {errors.customer && <p className={errorClass}>{errors.customer}</p>}
+            </div>
+            <div>
+              <label className={labelClass}>Area / Location *</label>
+              <input
+                type="text"
+                placeholder="e.g. Kigali Centre"
+                value={form.area}
+                onChange={(e) => setForm((p) => ({ ...p, area: e.target.value }))}
+                className={inputClass}
+              />
+              {errors.area && <p className={errorClass}>{errors.area}</p>}
+            </div>
+            <div>
+              <label className={labelClass}>Sales Rep *</label>
+              {canViewAllReps ? (
+                <select
+                  value={form.salesperson}
+                  onChange={(e) => setForm((p) => ({ ...p, salesperson: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">Select rep...</option>
+                  {SALESPEOPLE.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              ) : (
+                <input type="text" value={currentUserName} disabled className={`${inputClass} bg-muted text-muted-foreground cursor-not-allowed`} />
+              )}
+              {errors.salesperson && <p className={errorClass}>{errors.salesperson}</p>}
+            </div>
+            <div>
+              <label className={labelClass}>Pipeline Stage</label>
+              <select
+                value={form.stage}
+                onChange={(e) => setForm((p) => ({ ...p, stage: e.target.value }))}
+                className={inputClass}
+              >
+                {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Potential Value (RWF) *</label>
+              <input
+                type="number"
+                placeholder="e.g. 500000"
+                value={form.potentialValue}
+                onChange={(e) => setForm((p) => ({ ...p, potentialValue: e.target.value }))}
+                className={inputClass}
+                min={0}
+              />
+              {errors.potentialValue && <p className={errorClass}>{errors.potentialValue}</p>}
+            </div>
+            <div>
+              <label className={labelClass}>Follow-up Date *</label>
+              <input
+                type="date"
+                value={form.followUpDate}
+                onChange={(e) => setForm((p) => ({ ...p, followUpDate: e.target.value }))}
+                className={inputClass}
+              />
+              {errors.followUpDate && <p className={errorClass}>{errors.followUpDate}</p>}
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Next Action</label>
+            <input
+              type="text"
+              placeholder="e.g. Send proposal, Schedule demo..."
+              value={form.nextAction}
+              onChange={(e) => setForm((p) => ({ ...p, nextAction: e.target.value }))}
+              className={inputClass}
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 px-5 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-sm font-medium border border-border rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 px-4 py-2 text-sm font-semibold bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus size={15} />
+            Add Deal
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SalesPipelineClient() {
   const { currentUser, canViewAllReps } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
@@ -35,6 +221,7 @@ export default function SalesPipelineClient() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState('');
+  const [showAddDeal, setShowAddDeal] = useState(false);
   const dragSourceStage = useRef<string | null>(null);
 
   const effectiveRep = canViewAllReps ? repFilter : currentUser.name;
@@ -96,6 +283,10 @@ export default function SalesPipelineClient() {
 
   const stageTotal = (stage: string) =>
     dealsByStage(stage).reduce((s, d) => s + d.potentialValue, 0);
+
+  function handleAddDeal(deal: PipelineDeal) {
+    setDeals((prev) => [deal, ...prev]);
+  }
 
   function handleDownloadCSV() {
     const rows = [
@@ -177,6 +368,15 @@ export default function SalesPipelineClient() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
+      {showAddDeal && (
+        <AddDealModal
+          onClose={() => setShowAddDeal(false)}
+          onAdd={handleAddDeal}
+          currentUserName={currentUser.name}
+          canViewAllReps={canViewAllReps}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -188,6 +388,14 @@ export default function SalesPipelineClient() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Add Deal button */}
+          <button
+            onClick={() => setShowAddDeal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition-colors shadow-sm"
+          >
+            <Plus size={15} />
+            <span className="hidden sm:inline">Add Deal</span>
+          </button>
           {/* View toggle */}
           <div className="flex items-center bg-muted rounded-lg p-1 gap-0.5">
             <button

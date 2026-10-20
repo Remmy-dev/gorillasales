@@ -1,24 +1,30 @@
 'use client';
 
 import React from 'react';
-import { monthlyTargets, formatRWF } from '@/lib/mockData';
+import { getMonthTargets, formatRWF } from '@/lib/mockData';
 import { useUser } from '@/context/UserContext';
 
-export default function RepTargetsTable() {
+interface RepTargetsTableProps {
+  selectedMonth: string;
+  monthLabel: string;
+}
+
+export default function RepTargetsTable({ selectedMonth, monthLabel }: RepTargetsTableProps) {
   const { currentUser, canViewAllReps } = useUser();
+  const allTargets = getMonthTargets(selectedMonth);
 
   const visibleTargets = canViewAllReps
-    ? monthlyTargets
-    : monthlyTargets?.filter((t) => t?.salesperson === currentUser?.name);
+    ? allTargets
+    : allTargets?.filter((t) => t?.salesperson === currentUser?.name);
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          {canViewAllReps ? 'Rep Performance — September 2026' : 'My Performance — September 2026'}
+          {canViewAllReps ? `Rep Performance — ${monthLabel}` : `My Performance — ${monthLabel}`}
         </h3>
         <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-          Live
+          {selectedMonth === '2026-09' ? 'Live' : 'Historical'}
         </span>
       </div>
       <div className="overflow-x-auto">
@@ -32,7 +38,10 @@ export default function RepTargetsTable() {
                 Target
               </th>
               <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Actual
+                Actual (RWF)
+              </th>
+              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                KG Sold
               </th>
               <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Achievement
@@ -83,6 +92,9 @@ export default function RepTargetsTable() {
                   </td>
                   <td className="px-4 py-3 text-right text-sm font-semibold text-foreground font-tabular">
                     {formatRWF(rep?.actualSales)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm text-foreground font-tabular">
+                    {rep?.kgSold ? `${rep.kgSold.toLocaleString()} KG` : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-center gap-1">

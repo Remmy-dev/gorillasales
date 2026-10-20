@@ -4,6 +4,7 @@ import { Roboto } from 'next/font/google';
 import '../styles/tailwind.css';
 import { ConfigProvider } from '@/context/ConfigContext';
 import { UserProvider } from '@/context/UserContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const roboto = Roboto({
   subsets: ['latin'],
@@ -32,11 +33,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={roboto.variable}>
       <body>
-        <ConfigProvider>
-          <UserProvider>
-            {children}
-          </UserProvider>
-        </ConfigProvider>
+        <AuthProvider>
+          <ConfigProvider>
+            <UserProvider>
+              {children}
+            </UserProvider>
+          </ConfigProvider>
+        </AuthProvider>
 
         <script type="module" async src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fgorillasal4684back.builtwithrocket.new&_be=https%3A%2F%2Fappanalytics.rocket.new&_v=0.1.20" />
         <script type="module" defer src="https://static.rocket.new/rocket-shot.js?v=0.0.3" /></body>

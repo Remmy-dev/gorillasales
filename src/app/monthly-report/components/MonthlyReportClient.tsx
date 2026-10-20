@@ -21,6 +21,8 @@ import { visitLogs, SALESPEOPLE, formatRWF } from '@/lib/mockData';
 import { useUser } from '@/context/UserContext';
 import { useConfig } from '@/context/ConfigContext';
 import { getRepTarget, getRepTargetWeight } from '@/lib/configStore';
+import SavedFiltersPanel from './SavedFiltersPanel';
+import type { SavedFilter } from './SavedFiltersPanel';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -251,6 +253,33 @@ export default function MonthlyReportClient() {
     setGenerated(false);
   }
 
+  function handleLoadFilter(filter: SavedFilter) {
+    setReportType(filter.reportType as ReportType);
+    if (filter.selectedMonth !== undefined) setSelectedMonth(filter.selectedMonth);
+    if (filter.selectedYear !== undefined) setSelectedYear(filter.selectedYear);
+    if (filter.selectedRep !== undefined && canViewAllReps) setSelectedRep(filter.selectedRep);
+    if (filter.selectedDate !== undefined) setSelectedDate(filter.selectedDate);
+    if (filter.selectedWeek !== undefined) setSelectedWeek(filter.selectedWeek);
+    if (filter.selectedWeekYear !== undefined) setSelectedWeekYear(filter.selectedWeekYear);
+    if (filter.selectedQuarter !== undefined) setSelectedQuarter(filter.selectedQuarter);
+    if (filter.selectedQuarterYear !== undefined) setSelectedQuarterYear(filter.selectedQuarterYear);
+    if (filter.selectedYearOnly !== undefined) setSelectedYearOnly(filter.selectedYearOnly);
+    setGenerated(false);
+  }
+
+  const currentFilterState = {
+    reportType,
+    selectedMonth,
+    selectedYear,
+    selectedRep: effectiveRep,
+    selectedDate,
+    selectedWeek,
+    selectedWeekYear,
+    selectedQuarter,
+    selectedQuarterYear,
+    selectedYearOnly,
+  };
+
   function handleGenerate() {
     setGenerated(true);
   }
@@ -413,6 +442,14 @@ export default function MonthlyReportClient() {
           <CheckCircle size={16} />
           {exportSuccess}
         </div>
+      )}
+
+      {/* Saved Filters Panel — managers only */}
+      {canViewAllReps && (
+        <SavedFiltersPanel
+          currentFilter={currentFilterState}
+          onLoad={handleLoadFilter}
+        />
       )}
 
       {/* Report Type Tabs */}

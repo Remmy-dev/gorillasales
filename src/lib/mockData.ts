@@ -587,6 +587,7 @@ export interface MonthlyTarget {
   customerVisits: number;
   orders: number;
   outstandingFollowUps: number;
+  kgSold?: number;
 }
 
 export const monthlyTargets: MonthlyTarget[] = [
@@ -600,6 +601,7 @@ export const monthlyTargets: MonthlyTarget[] = [
     customerVisits: 14,
     orders: 9,
     outstandingFollowUps: 1,
+    kgSold: 652,
   },
   {
     id: 'target-002',
@@ -611,6 +613,7 @@ export const monthlyTargets: MonthlyTarget[] = [
     customerVisits: 11,
     orders: 6,
     outstandingFollowUps: 3,
+    kgSold: 456,
   },
   {
     id: 'target-003',
@@ -622,6 +625,7 @@ export const monthlyTargets: MonthlyTarget[] = [
     customerVisits: 13,
     orders: 8,
     outstandingFollowUps: 1,
+    kgSold: 575,
   },
   {
     id: 'target-004',
@@ -633,6 +637,7 @@ export const monthlyTargets: MonthlyTarget[] = [
     customerVisits: 10,
     orders: 7,
     outstandingFollowUps: 2,
+    kgSold: 483,
   },
   {
     id: 'target-005',
@@ -644,8 +649,94 @@ export const monthlyTargets: MonthlyTarget[] = [
     customerVisits: 12,
     orders: 9,
     outstandingFollowUps: 0,
+    kgSold: 691,
   },
 ];
+
+// Historical monthly targets keyed by "YYYY-MM"
+export interface HistoricalMonthData {
+  month: string; // e.g. "2026-08"
+  label: string; // e.g. "Aug 2026"
+  targets: MonthlyTarget[];
+}
+
+export const historicalMonthlyData: HistoricalMonthData[] = [
+  {
+    month: '2026-04',
+    label: 'Apr 2026',
+    targets: [
+      { id: 'h-apr-001', salesperson: 'Karenzi Remmy', target: 3500000, actualSales: 2800000, achievementPct: 80.0, newCustomers: 2, customerVisits: 12, orders: 8, outstandingFollowUps: 0, kgSold: 584 },
+      { id: 'h-apr-002', salesperson: 'Mastiko Frank', target: 3000000, actualSales: 2100000, achievementPct: 70.0, newCustomers: 1, customerVisits: 10, orders: 5, outstandingFollowUps: 1, kgSold: 438 },
+      { id: 'h-apr-003', salesperson: 'Isimbi Patience', target: 2800000, actualSales: 2520000, achievementPct: 90.0, newCustomers: 3, customerVisits: 11, orders: 7, outstandingFollowUps: 0, kgSold: 525 },
+      { id: 'h-apr-004', salesperson: 'Alex Mushumba', target: 3200000, actualSales: 1920000, achievementPct: 60.0, newCustomers: 0, customerVisits: 9, orders: 5, outstandingFollowUps: 2, kgSold: 400 },
+      { id: 'h-apr-005', salesperson: 'Muyenzi Dan', target: 3000000, actualSales: 2880000, achievementPct: 96.0, newCustomers: 2, customerVisits: 11, orders: 8, outstandingFollowUps: 0, kgSold: 600 },
+    ],
+  },
+  {
+    month: '2026-05',
+    label: 'May 2026',
+    targets: [
+      { id: 'h-may-001', salesperson: 'Karenzi Remmy', target: 3600000, actualSales: 3240000, achievementPct: 90.0, newCustomers: 3, customerVisits: 13, orders: 9, outstandingFollowUps: 0, kgSold: 675 },
+      { id: 'h-may-002', salesperson: 'Mastiko Frank', target: 3100000, actualSales: 2480000, achievementPct: 80.0, newCustomers: 2, customerVisits: 11, orders: 7, outstandingFollowUps: 1, kgSold: 517 },
+      { id: 'h-may-003', salesperson: 'Isimbi Patience', target: 2900000, actualSales: 2610000, achievementPct: 90.0, newCustomers: 1, customerVisits: 12, orders: 8, outstandingFollowUps: 0, kgSold: 544 },
+      { id: 'h-may-004', salesperson: 'Alex Mushumba', target: 3300000, actualSales: 2640000, achievementPct: 80.0, newCustomers: 1, customerVisits: 10, orders: 7, outstandingFollowUps: 0, kgSold: 550 },
+      { id: 'h-may-005', salesperson: 'Muyenzi Dan', target: 3200000, actualSales: 2830000, achievementPct: 88.4, newCustomers: 2, customerVisits: 12, orders: 9, outstandingFollowUps: 0, kgSold: 590 },
+    ],
+  },
+  {
+    month: '2026-06',
+    label: 'Jun 2026',
+    targets: [
+      { id: 'h-jun-001', salesperson: 'Karenzi Remmy', target: 3700000, actualSales: 3330000, achievementPct: 90.0, newCustomers: 2, customerVisits: 14, orders: 10, outstandingFollowUps: 0, kgSold: 694 },
+      { id: 'h-jun-002', salesperson: 'Mastiko Frank', target: 3200000, actualSales: 2880000, achievementPct: 90.0, newCustomers: 3, customerVisits: 12, orders: 8, outstandingFollowUps: 0, kgSold: 600 },
+      { id: 'h-jun-003', salesperson: 'Isimbi Patience', target: 3000000, actualSales: 2850000, achievementPct: 95.0, newCustomers: 2, customerVisits: 13, orders: 9, outstandingFollowUps: 0, kgSold: 594 },
+      { id: 'h-jun-004', salesperson: 'Alex Mushumba', target: 3400000, actualSales: 2720000, achievementPct: 80.0, newCustomers: 1, customerVisits: 11, orders: 7, outstandingFollowUps: 1, kgSold: 567 },
+      { id: 'h-jun-005', salesperson: 'Muyenzi Dan', target: 3300000, actualSales: 2820000, achievementPct: 85.5, newCustomers: 2, customerVisits: 12, orders: 9, outstandingFollowUps: 0, kgSold: 588 },
+    ],
+  },
+  {
+    month: '2026-07',
+    label: 'Jul 2026',
+    targets: [
+      { id: 'h-jul-001', salesperson: 'Karenzi Remmy', target: 3800000, actualSales: 2660000, achievementPct: 70.0, newCustomers: 1, customerVisits: 11, orders: 7, outstandingFollowUps: 2, kgSold: 554 },
+      { id: 'h-jul-002', salesperson: 'Mastiko Frank', target: 3300000, actualSales: 1980000, achievementPct: 60.0, newCustomers: 0, customerVisits: 9, orders: 5, outstandingFollowUps: 3, kgSold: 413 },
+      { id: 'h-jul-003', salesperson: 'Isimbi Patience', target: 3100000, actualSales: 2480000, achievementPct: 80.0, newCustomers: 2, customerVisits: 12, orders: 7, outstandingFollowUps: 1, kgSold: 517 },
+      { id: 'h-jul-004', salesperson: 'Alex Mushumba', target: 3600000, actualSales: 2160000, achievementPct: 60.0, newCustomers: 0, customerVisits: 9, orders: 6, outstandingFollowUps: 2, kgSold: 450 },
+      { id: 'h-jul-005', salesperson: 'Muyenzi Dan', target: 3500000, actualSales: 3620000, achievementPct: 103.4, newCustomers: 4, customerVisits: 13, orders: 10, outstandingFollowUps: 0, kgSold: 754 },
+    ],
+  },
+  {
+    month: '2026-08',
+    label: 'Aug 2026',
+    targets: [
+      { id: 'h-aug-001', salesperson: 'Karenzi Remmy', target: 3900000, actualSales: 3510000, achievementPct: 90.0, newCustomers: 2, customerVisits: 14, orders: 10, outstandingFollowUps: 0, kgSold: 731 },
+      { id: 'h-aug-002', salesperson: 'Mastiko Frank', target: 3400000, actualSales: 2380000, achievementPct: 70.0, newCustomers: 1, customerVisits: 11, orders: 6, outstandingFollowUps: 2, kgSold: 496 },
+      { id: 'h-aug-003', salesperson: 'Isimbi Patience', target: 3100000, actualSales: 2790000, achievementPct: 90.0, newCustomers: 3, customerVisits: 13, orders: 9, outstandingFollowUps: 0, kgSold: 581 },
+      { id: 'h-aug-004', salesperson: 'Alex Mushumba', target: 3700000, actualSales: 2590000, achievementPct: 70.0, newCustomers: 1, customerVisits: 10, orders: 7, outstandingFollowUps: 1, kgSold: 540 },
+      { id: 'h-aug-005', salesperson: 'Muyenzi Dan', target: 3500000, actualSales: 3070000, achievementPct: 87.7, newCustomers: 2, customerVisits: 12, orders: 9, outstandingFollowUps: 0, kgSold: 640 },
+    ],
+  },
+  {
+    month: '2026-09',
+    label: 'Sep 2026',
+    targets: monthlyTargets,
+  },
+];
+
+export const AVAILABLE_MONTHS = [
+  { value: '2026-09', label: 'Sep 2026' },
+  { value: '2026-08', label: 'Aug 2026' },
+  { value: '2026-07', label: 'Jul 2026' },
+  { value: '2026-06', label: 'Jun 2026' },
+  { value: '2026-05', label: 'May 2026' },
+  { value: '2026-04', label: 'Apr 2026' },
+];
+
+export function getMonthTargets(monthKey: string): MonthlyTarget[] {
+  if (monthKey === '2026-09') return monthlyTargets;
+  const found = historicalMonthlyData.find((h) => h.month === monthKey);
+  return found ? found.targets : monthlyTargets;
+}
 
 export const salesTrendData = [
   { month: 'Apr', target: 14800000, actual: 11200000 },
@@ -734,4 +825,13 @@ export function formatRWF(value: number): string {
 
 export function formatRWFFull(value: number): string {
   return `RWF ${value.toLocaleString('en-US')}`;
+}
+
+// KG conversion helper
+export function kgToGrams(kg: number): number {
+  return kg * 1000;
+}
+
+export function gramsToKg(grams: number): number {
+  return grams / 1000;
 }
